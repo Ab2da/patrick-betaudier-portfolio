@@ -33,7 +33,7 @@ export default function Contact() {
     <section className="ap-section-dark" id="contact">
       <div className="ap-label" style={{ color: "#b9c4b6", marginBottom: 10 }}>Get in Touch</div>
       <p className="ap-display" style={{ fontSize: 20, maxWidth: 560, lineHeight: 1.5, marginBottom: 24 }}>
-        Contact the Artist
+        Contact 
       </p>
 
       {status === "sent" ? (
