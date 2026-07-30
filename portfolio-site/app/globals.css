@@ -75,6 +75,38 @@ html, body {
 .ap-plaque .t { font-family: "Fraunces", serif; font-style: italic; font-size: 14px; }
 .ap-plaque .m { font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--ink-soft); margin-top: 2px; }
 
+.ap-carousel {
+  display: flex; align-items: center; justify-content: center; gap: 18px;
+  padding: 8px 32px 60px; flex-wrap: wrap;
+}
+.ap-carousel-frame {
+  position: relative; max-width: 640px; width: 100%; cursor: pointer;
+  background: var(--paper); border: 1px solid rgba(33,30,26,0.08); border-radius: 2px; overflow: hidden;
+}
+.ap-carousel-frame img {
+  width: 100%; display: block; max-height: 60vh; object-fit: contain; background: var(--paper);
+}
+.ap-carousel-plaque {
+  position: static; margin: 0; background: #e9dcb8; border: 1px solid var(--ochre); border-top: none;
+  box-shadow: none; padding: 10px 14px;
+}
+.ap-carousel-arrow {
+  font-family: "IBM Plex Mono", monospace; font-size: 28px; line-height: 1;
+  background: none; border: 1px solid rgba(33,30,26,0.25); border-radius: 50%;
+  width: 46px; height: 46px; cursor: pointer; color: var(--ink); flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.ap-carousel-arrow:hover { background: var(--sienna); color: #fff; border-color: var(--sienna); }
+.ap-carousel-dots {
+  display: flex; gap: 8px; width: 100%; justify-content: center; padding-top: 10px;
+}
+.ap-carousel-dots button {
+  width: 8px; height: 8px; border-radius: 50%; border: none; padding: 0;
+  background: rgba(33,30,26,0.25); cursor: pointer;
+}
+.ap-carousel-dots button.active { background: var(--sienna); }
+
 .ap-section-dark { background: var(--green); color: #efe8d6; padding: 60px 32px; }
 
 .ap-footer {
