@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Contact from "./Contact";
 
 const SERIES_ALL = "All Work";
@@ -8,17 +8,28 @@ const SERIES_ALL = "All Work";
 export default function Gallery({ meta, works }) {
   const [activeSeries, setActiveSeries] = useState(SERIES_ALL);
   const [lightboxId, setLightboxId] = useState(null);
+  const [carouselIndex, setCarouselIndex] = useState(0);
 
   const seriesList = [SERIES_ALL, ...Array.from(new Set(works.map((w) => w.series).filter(Boolean)))];
   const visibleWorks = activeSeries === SERIES_ALL ? works : works.filter((w) => w.series === activeSeries);
   const featured = works[0];
   const lightboxWork = works.find((w) => w.id === lightboxId);
   const lightboxIndex = visibleWorks.findIndex((w) => w.id === lightboxId);
+  const current = visibleWorks[carouselIndex] || null;
+
+  useEffect(() => {
+    setCarouselIndex(0);
+  }, [activeSeries]);
 
   function stepLightbox(dir) {
     if (lightboxIndex === -1) return;
     const next = (lightboxIndex + dir + visibleWorks.length) % visibleWorks.length;
     setLightboxId(visibleWorks[next].id);
+  }
+
+  function stepCarousel(dir) {
+    if (visibleWorks.length === 0) return;
+    setCarouselIndex((i) => (i + dir + visibleWorks.length) % visibleWorks.length);
   }
 
   return (
@@ -59,17 +70,32 @@ export default function Gallery({ meta, works }) {
         </div>
       )}
 
-      {visibleWorks.length > 0 && (
-        <section className="ap-grid">
-          {visibleWorks.map((w) => (
-            <div className="ap-card" key={w.id} onClick={() => setLightboxId(w.id)}>
-              <img src={w.image} alt={w.title} />
-              <div className="ap-plaque">
-                <div className="t">{w.title}</div>
-                <div className="m">{[w.medium, w.dimensions, w.year].filter(Boolean).join(" · ")}</div>
-              </div>
+      {current && (
+        <section className="ap-carousel">
+          <button className="ap-carousel-arrow" onClick={() => stepCarousel(-1)} aria-label="Previous painting">‹</button>
+
+          <div className="ap-carousel-frame" onClick={() => setLightboxId(current.id)}>
+            <img src={current.image} alt={current.title} />
+            <div className="ap-plaque ap-carousel-plaque">
+              <div className="t">{current.title}</div>
+              <div className="m">{[current.medium, current.dimensions, current.year].filter(Boolean).join(" · ")}</div>
             </div>
-          ))}
+          </div>
+
+          <button className="ap-carousel-arrow" onClick={() => stepCarousel(1)} aria-label="Next painting">›</button>
+
+          {visibleWorks.length > 1 && (
+            <div className="ap-carousel-dots">
+              {visibleWorks.map((w, i) => (
+                <button
+                  key={w.id}
+                  className={i === carouselIndex ? "active" : ""}
+                  onClick={() => setCarouselIndex(i)}
+                  aria-label={"Go to " + w.title}
+                />
+              ))}
+            </div>
+          )}
         </section>
       )}
 
@@ -107,3 +133,6 @@ export default function Gallery({ meta, works }) {
     </div>
   );
 }
+
+const closeBtnStyle = { position: "absolute", top: -40, right: 0, color: "#fff", background: "none", border: "none", cursor: "pointer", fontSize: 20 };
+const navBtnStyle = { position: "absolute", top: "50%", transform: "translateY(-50%)", color: "#fff", background: "none", border: "none", cursor: "pointer", fontSize: 34 };
