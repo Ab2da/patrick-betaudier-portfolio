@@ -154,6 +154,11 @@ export default function AdminPage() {
     setWorks((ws) => ws.filter((w) => w.id !== id));
   }
 
+  async function makeFeatured(id) {
+    await fetch(`/api/works/${id}`, { method: "PATCH" });
+    await loadData();
+  }
+
   if (checkingSession) return null;
 
   if (!authed) {
@@ -277,7 +282,7 @@ export default function AdminPage() {
           <div>
             <p className="ap-label" style={{ marginBottom: 8 }}>Current works ({works.length})</p>
             <div style={{ display: "grid", gap: 8, maxHeight: 560, overflow: "auto" }}>
-              {works.map((w) => (
+              {works.map((w, i) => (
                 <div
                   key={w.id}
                   style={{
@@ -288,11 +293,16 @@ export default function AdminPage() {
                 >
                   <img src={w.image} alt={w.title} style={{ width: 46, height: 56, objectFit: "cover", borderRadius: 2 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>{w.title}</div>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>
+                      {w.title} {i === 0 && <span style={{ color: "var(--sienna)", fontSize: 11 }}>★ Featured</span>}
+                    </div>
                     <div className="ap-mono" style={{ fontSize: 10, color: "var(--ink-soft)" }}>
                       {w.series || "—"} {w.year && `· ${w.year}`}
                     </div>
                   </div>
+                  {i !== 0 && (
+                    <button className="ap-btn ap-btn-ghost" onClick={() => makeFeatured(w.id)}>Feature</button>
+                  )}
                   <button className="ap-btn ap-btn-ghost" onClick={() => openEdit(w)}>Edit</button>
                   <button
                     className="ap-btn ap-btn-ghost"
@@ -311,3 +321,4 @@ export default function AdminPage() {
     </div>
   );
 }
+
