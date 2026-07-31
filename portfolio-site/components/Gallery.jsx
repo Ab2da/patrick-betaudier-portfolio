@@ -1,21 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Contact from "./Contact";
 
 const SERIES_ALL = "All Work";
+const VISIBLE_COUNT = 3;
+const DRAG_THRESHOLD = 60;
 
 export default function Gallery({ meta, works }) {
   const [activeSeries, setActiveSeries] = useState(SERIES_ALL);
   const [lightboxId, setLightboxId] = useState(null);
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [carouselDir, setCarouselDir] = useState(1);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const dragStartX = useRef(0);
+  const draggedRef = useRef(false);
 
   const seriesList = [SERIES_ALL, ...Array.from(new Set(works.map((w) => w.series).filter(Boolean)))];
   const visibleWorks = activeSeries === SERIES_ALL ? works : works.filter((w) => w.series === activeSeries);
   const featured = works[0];
   const lightboxWork = works.find((w) => w.id === lightboxId);
   const lightboxIndex = visibleWorks.findIndex((w) => w.id === lightboxId);
-  const current = visibleWorks[carouselIndex] || null;
 
   useEffect(() => {
     setCarouselIndex(0);
@@ -29,8 +35,43 @@ export default function Gallery({ meta, works }) {
 
   function stepCarousel(dir) {
     if (visibleWorks.length === 0) return;
+    setCarouselDir(dir);
     setCarouselIndex((i) => (i + dir + visibleWorks.length) % visibleWorks.length);
   }
+
+  function handleDragStart(clientX) {
+    dragStartX.current = clientX;
+    draggedRef.current = false;
+    setIsDragging(true);
+  }
+
+  function handleDragMove(clientX) {
+    if (!isDragging) return;
+    const delta = clientX - dragStartX.current;
+    if (Math.abs(delta) > 5) draggedRef.current = true;
+    setDragOffset(delta);
+  }
+
+  function handleDragEnd() {
+    if (!isDragging) return;
+    const delta = dragOffset;
+    setIsDragging(false);
+    setDragOffset(0);
+    if (Math.abs(delta) > DRAG_THRESHOLD) {
+      stepCarousel(delta < 0 ? 1 : -1);
+    }
+  }
+
+  function handleCardClick(id) {
+    if (draggedRef.current) {
+      draggedRef.current = false;
+      return;
+    }
+    setLightboxId(id);
+  }
+
+  const slotCount = Math.min(VISIBLE_COUNT, visibleWorks.length);
+  const carouselSlots = Array.from({ length: slotCount }, (_, offset) => visibleWorks[(carouselIndex + offset) % visibleWorks.length]);
 
   return (
     <div>
@@ -70,19 +111,43 @@ export default function Gallery({ meta, works }) {
         </div>
       )}
 
-      {current && (
+      {visibleWorks.length > 0 && (
         <section className="ap-carousel">
-          <button className="ap-carousel-arrow" onClick={() => stepCarousel(-1)} aria-label="Previous painting">‹</button>
+          <button className="ap-carousel-arrow" onClick={() => stepCarousel(-1)} aria-label="Previous paintings">‹</button>
 
-          <div className="ap-carousel-frame" onClick={() => setLightboxId(current.id)}>
-            <img src={current.image} alt={current.title} />
-            <div className="ap-plaque ap-carousel-plaque">
-              <div className="t">{current.title}</div>
-              <div className="m">{[current.medium, current.dimensions, current.year].filter(Boolean).join(" · ")}</div>
-            </div>
+          <div
+            className="ap-carousel-track"
+            style={{
+              transform: "translateX(" + dragOffset + "px)",
+              transition: isDragging ? "none" : "transform 0.25s ease",
+              cursor: isDragging ? "grabbing" : "grab",
+              userSelect: isDragging ? "none" : "auto",
+            }}
+            onMouseDown={(e) => handleDragStart(e.clientX)}
+            onMouseMove={(e) => handleDragMove(e.clientX)}
+            onMouseUp={handleDragEnd}
+            onMouseLeave={() => isDragging && handleDragEnd()}
+            onTouchStart={(e) => handleDragStart(e.touches[0].clientX)}
+            onTouchMove={(e) => handleDragMove(e.touches[0].clientX)}
+            onTouchEnd={handleDragEnd}
+            onDragStart={(e) => e.preventDefault()}
+          >
+            {carouselSlots.map((w, offset) => (
+              <div
+                className={"ap-card ap-carousel-card " + (carouselDir === 1 ? "from-right" : "from-left")}
+                key={w.id + "-" + offset + "-" + carouselIndex}
+                onClick={() => handleCardClick(w.id)}
+              >
+                <img src={w.image} alt={w.title} draggable={false} />
+                <div className="ap-plaque">
+                  <div className="t">{w.title}</div>
+                  <div className="m">{[w.medium, w.dimensions, w.year].filter(Boolean).join(" · ")}</div>
+                </div>
+              </div>
+            ))}
           </div>
 
-          <button className="ap-carousel-arrow" onClick={() => stepCarousel(1)} aria-label="Next painting">›</button>
+          <button className="ap-carousel-arrow" onClick={() => stepCarousel(1)} aria-label="Next paintings">›</button>
 
           {visibleWorks.length > 1 && (
             <div className="ap-carousel-dots">
@@ -90,7 +155,10 @@ export default function Gallery({ meta, works }) {
                 <button
                   key={w.id}
                   className={i === carouselIndex ? "active" : ""}
-                  onClick={() => setCarouselIndex(i)}
+                  onClick={() => {
+                    setCarouselDir(i > carouselIndex ? 1 : -1);
+                    setCarouselIndex(i);
+                  }}
                   aria-label={"Go to " + w.title}
                 />
               ))}
