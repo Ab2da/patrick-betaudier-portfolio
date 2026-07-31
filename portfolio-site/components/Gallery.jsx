@@ -113,41 +113,43 @@ export default function Gallery({ meta, works }) {
 
       {visibleWorks.length > 0 && (
         <section className="ap-carousel">
-          <button className="ap-carousel-arrow" onClick={() => stepCarousel(-1)} aria-label="Previous paintings">‹</button>
+          <div className="ap-carousel-row">
+            <button className="ap-carousel-arrow" onClick={() => stepCarousel(-1)} aria-label="Previous paintings">‹</button>
 
-          <div
-            className="ap-carousel-track"
-            style={{
-              transform: "translateX(" + dragOffset + "px)",
-              transition: isDragging ? "none" : "transform 0.25s ease",
-              cursor: isDragging ? "grabbing" : "grab",
-              userSelect: isDragging ? "none" : "auto",
-            }}
-            onMouseDown={(e) => handleDragStart(e.clientX)}
-            onMouseMove={(e) => handleDragMove(e.clientX)}
-            onMouseUp={handleDragEnd}
-            onMouseLeave={() => isDragging && handleDragEnd()}
-            onTouchStart={(e) => handleDragStart(e.touches[0].clientX)}
-            onTouchMove={(e) => handleDragMove(e.touches[0].clientX)}
-            onTouchEnd={handleDragEnd}
-            onDragStart={(e) => e.preventDefault()}
-          >
-            {carouselSlots.map((w, offset) => (
-              <div
-                className={"ap-card ap-carousel-card " + (carouselDir === 1 ? "from-right" : "from-left")}
-                key={w.id + "-" + offset + "-" + carouselIndex}
-                onClick={() => handleCardClick(w.id)}
-              >
-                <img src={w.image} alt={w.title} draggable={false} />
-                <div className="ap-plaque">
-                  <div className="t">{w.title}</div>
-                  <div className="m">{[w.medium, w.dimensions, w.year].filter(Boolean).join(" · ")}</div>
+            <div
+              className="ap-carousel-track"
+              style={{
+                transform: "translateX(" + dragOffset + "px)",
+                transition: isDragging ? "none" : "transform 0.25s ease",
+                cursor: isDragging ? "grabbing" : "grab",
+                userSelect: isDragging ? "none" : "auto",
+              }}
+              onMouseDown={(e) => handleDragStart(e.clientX)}
+              onMouseMove={(e) => handleDragMove(e.clientX)}
+              onMouseUp={handleDragEnd}
+              onMouseLeave={() => isDragging && handleDragEnd()}
+              onTouchStart={(e) => handleDragStart(e.touches[0].clientX)}
+              onTouchMove={(e) => handleDragMove(e.touches[0].clientX)}
+              onTouchEnd={handleDragEnd}
+              onDragStart={(e) => e.preventDefault()}
+            >
+              {carouselSlots.map((w, offset) => (
+                <div
+                  className={"ap-card ap-carousel-card " + (carouselDir === 1 ? "from-right" : "from-left")}
+                  key={w.id + "-" + offset + "-" + carouselIndex}
+                  onClick={() => handleCardClick(w.id)}
+                >
+                  <img src={w.image} alt={w.title} draggable={false} />
+                  <div className="ap-plaque">
+                    <div className="t">{w.title}</div>
+                    <div className="m">{[w.medium, w.dimensions, w.year].filter(Boolean).join(" · ")}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          <button className="ap-carousel-arrow" onClick={() => stepCarousel(1)} aria-label="Next paintings">›</button>
+            <button className="ap-carousel-arrow" onClick={() => stepCarousel(1)} aria-label="Next paintings">›</button>
+          </div>
 
           {visibleWorks.length > 1 && (
             <div className="ap-carousel-dots">
