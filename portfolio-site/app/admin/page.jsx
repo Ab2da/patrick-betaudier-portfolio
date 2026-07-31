@@ -161,7 +161,9 @@ export default function AdminPage() {
         // lag behind a just-completed put(), so an immediate reload can miss
         // the record we just saved. Using the response we already have avoids
         // that race (this was the "first add doesn't show up" bug).
-        setWorks((ws) => (editingId ? ws.map((w) => (w.id === saved.id ? saved : w)) : [saved, ...ws]));
+        // New pieces are appended, matching the server, so a fresh upload
+        // never bumps whatever is currently featured (works[0]) out of place.
+        setWorks((ws) => (editingId ? ws.map((w) => (w.id === saved.id ? saved : w)) : [...ws, saved]));
         openNew();
       }
     } finally {
