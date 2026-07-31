@@ -141,7 +141,13 @@ export default function AdminPage() {
       const method = editingId ? "PUT" : "POST";
       const res = await fetch(url, { method, body: fd });
       if (res.ok) {
-        await loadData();
+        const saved = await res.json();
+        // Update local state directly from the response instead of re-fetching
+        // from blob storage right away: Vercel Blob's list() index can briefly
+        // lag behind a just-completed put(), so an immediate reload can miss
+        // the record we just saved. Using the response we already have avoids
+        // that race (this was the "first add doesn't show up" bug).
+        setWorks((ws) => (editingId ? ws.map((w) => (w.id === saved.id ? saved : w)) : [saved, ...ws]));
         openNew();
       }
     } finally {
@@ -156,7 +162,16 @@ export default function AdminPage() {
 
   async function makeFeatured(id) {
     await fetch(`/api/works/${id}`, { method: "PATCH" });
-    await loadData();
+    // Mirror the server-side reorder locally instead of reloading from
+    // storage immediately (same eventual-consistency race as above).
+    setWorks((ws) => {
+      const idx = ws.findIndex((w) => w.id === id);
+      if (idx <= 0) return ws;
+      const copy = ws.slice();
+      const [w] = copy.splice(idx, 1);
+      copy.unshift(w);
+      return copy;
+    });
   }
 
   if (checkingSession) return null;
@@ -321,4 +336,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
