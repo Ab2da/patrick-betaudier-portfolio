@@ -76,36 +76,49 @@ html, body {
 .ap-plaque .m { font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--ink-soft); margin-top: 2px; }
 
 .ap-carousel {
-  display: flex; align-items: center; justify-content: center; gap: 18px;
-  padding: 8px 32px 60px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 14px;
+  padding: 8px 32px 40px;
 }
-.ap-carousel-frame {
-  position: relative; max-width: 640px; width: 100%; cursor: pointer;
-  background: var(--paper); border: 1px solid rgba(33,30,26,0.08); border-radius: 2px; overflow: hidden;
+.ap-carousel-track {
+  display: flex; gap: 20px; overflow: hidden; flex: 1;
 }
-.ap-carousel-frame img {
-  width: 100%; display: block; max-height: 60vh; object-fit: contain; background: var(--paper);
+.ap-carousel-card {
+  flex: 0 0 calc((100% - 40px) / 3);
+  min-width: 0;
 }
-.ap-carousel-plaque {
-  position: static; margin: 0; background: #e9dcb8; border: 1px solid var(--ochre); border-top: none;
-  box-shadow: none; padding: 10px 14px;
+.ap-carousel-card.from-right { animation: ap-slide-in-right 0.4s ease; }
+.ap-carousel-card.from-left { animation: ap-slide-in-left 0.4s ease; }
+@keyframes ap-slide-in-right {
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes ap-slide-in-left {
+  from { opacity: 0; transform: translateX(-28px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 .ap-carousel-arrow {
-  font-family: "IBM Plex Mono", monospace; font-size: 28px; line-height: 1;
+  font-family: "IBM Plex Mono", monospace; font-size: 26px; line-height: 1;
   background: none; border: 1px solid rgba(33,30,26,0.25); border-radius: 50%;
-  width: 46px; height: 46px; cursor: pointer; color: var(--ink); flex: 0 0 auto;
+  width: 44px; height: 44px; cursor: pointer; color: var(--ink); flex: 0 0 auto;
   display: flex; align-items: center; justify-content: center;
   transition: background 0.2s ease, color 0.2s ease;
 }
 .ap-carousel-arrow:hover { background: var(--sienna); color: #fff; border-color: var(--sienna); }
 .ap-carousel-dots {
-  display: flex; gap: 8px; width: 100%; justify-content: center; padding-top: 10px;
+  display: flex; gap: 8px; width: 100%; justify-content: center; padding: 0 32px 40px;
 }
 .ap-carousel-dots button {
   width: 8px; height: 8px; border-radius: 50%; border: none; padding: 0;
   background: rgba(33,30,26,0.25); cursor: pointer;
 }
 .ap-carousel-dots button.active { background: var(--sienna); }
+
+@media (max-width: 900px) {
+  .ap-carousel-card { flex-basis: calc((100% - 20px) / 2); }
+}
+@media (max-width: 560px) {
+  .ap-carousel-card { flex-basis: 100%; }
+}
 
 .ap-section-dark { background: var(--green); color: #efe8d6; padding: 60px 32px; }
 
