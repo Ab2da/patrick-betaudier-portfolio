@@ -47,6 +47,7 @@ export default function AdminPage() {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [processingImage, setProcessingImage] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -123,13 +124,26 @@ export default function AdminPage() {
   async function handleFile(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const compressed = await compressImage(file);
-    setImageFile(compressed);
-    setImagePreview(URL.createObjectURL(compressed));
+    setProcessingImage(true);
+    setImageFile(null);
+    try {
+      const compressed = await compressImage(file);
+      setImageFile(compressed);
+      setImagePreview(URL.createObjectURL(compressed));
+    } finally {
+      setProcessingImage(false);
+    }
   }
 
   async function submitForm(e) {
     e.preventDefault();
+    // While a just-picked image is still being compressed, imageFile is
+    // briefly null even though the user has selected a file. Submitting
+    // during that window used to silently no-op here (nothing sent, nothing
+    // shown) -- that's the "first add does nothing" bug. The submit button
+    // is now disabled during processingImage so this shouldn't normally be
+    // reachable, but keep the guard for safety.
+    if (processingImage) return;
     if (!form.title.trim() || (!imageFile && !editingId)) return;
     setSaving(true);
     try {
@@ -278,12 +292,13 @@ export default function AdminPage() {
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               />
               <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFile} />
-              {imagePreview && (
+              {processingImage && <p className="ap-label">Processing image…</p>}
+              {imagePreview && !processingImage && (
                 <img src={imagePreview} alt="preview" style={{ width: 120, borderRadius: 2, marginTop: 4 }} />
               )}
               <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                <button className="ap-btn ap-btn-primary" type="submit" disabled={saving}>
-                  {saving ? "Saving…" : editingId ? "Save changes" : "Add to gallery"}
+                <button className="ap-btn ap-btn-primary" type="submit" disabled={saving || processingImage}>
+                  {saving ? "Saving…" : processingImage ? "Processing image…" : editingId ? "Save changes" : "Add to gallery"}
                 </button>
                 {editingId && (
                   <button type="button" className="ap-btn ap-btn-ghost" onClick={openNew}>
