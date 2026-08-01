@@ -19,6 +19,12 @@ export default function Gallery({ meta, works }) {
   const [carouselDir, setCarouselDir] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  // Arrow/dot clicks intentionally remount all 3 cards each step for a group
+  // "pop" effect. A drag settling on a new picture used to do the same thing
+  // across all 9 buffered cards, which showed up as a flash right as the
+  // glide stopped. This flag switches the settle path to identity-stable
+  // keys so already-visible cards are reused instead of remounted.
+  const [dragCommitting, setDragCommitting] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const dragStartX = useRef(0);
   const draggedRef = useRef(false);
@@ -67,6 +73,7 @@ export default function Gallery({ meta, works }) {
   function stepCarousel(dir) {
     if (visibleWorks.length === 0) return;
     setCarouselDir(dir);
+    setDragCommitting(false);
     setCarouselIndex((i) => (i + dir + visibleWorks.length) % visibleWorks.length);
   }
 
@@ -116,8 +123,12 @@ export default function Gallery({ meta, works }) {
     function frictionFrame(now) {
       const dt = Math.min(now - last, 40);
       last = now;
+      // Extra "brake" as we approach the travel limit so a hard flick eases
+      // into the edge instead of hitting a wall and stopping dead.
+      const nearEdge = Math.abs(offset) > maxOffset * 0.6;
+      const effectiveFriction = nearEdge ? FRICTION * 5 : FRICTION;
       const sign = velocity > 0 ? 1 : velocity < 0 ? -1 : 0;
-      const mag = Math.max(0, Math.abs(velocity) - FRICTION * dt);
+      const mag = Math.max(0, Math.abs(velocity) - effectiveFriction * dt);
       velocity = sign * mag;
       offset += velocity * dt;
       if (offset > maxOffset) {
@@ -171,6 +182,7 @@ export default function Gallery({ meta, works }) {
     if (steps !== 0) {
       const dir = steps > 0 ? -1 : 1;
       setCarouselDir(dir);
+      setDragCommitting(true);
       setCarouselIndex((i) => {
         const n = visibleWorks.length;
         return (((i - steps) % n) + n) % n;
@@ -203,7 +215,7 @@ export default function Gallery({ meta, works }) {
       : Array.from({ length: windowLength }, (_, i) => {
           const n = visibleWorks.length;
           const idx = (((windowStart + i) % n) + n) % n;
-          return visibleWorks[idx];
+          return { work: visibleWorks[idx], idx };
         });
   const trackTransform = -bufferCount * (cardStepRef.current || 0) + dragOffset;
 
@@ -277,10 +289,10 @@ export default function Gallery({ meta, works }) {
                   transition: "none",
                 }}
               >
-                {carouselSlots.map((w, i) => (
+                {carouselSlots.map(({ work: w, idx }, i) => (
                   <div
                     className={"ap-card ap-carousel-card " + (carouselDir === 1 ? "from-right" : "from-left")}
-                    key={w.id + "-" + (windowStart + i)}
+                    key={dragCommitting ? w.id + "-" + idx : w.id + "-" + (windowStart + i)}
                     onClick={() => handleCardClick(w.id)}
                   >
                     <img src={w.image} alt={w.title} draggable={false} />
@@ -304,6 +316,7 @@ export default function Gallery({ meta, works }) {
                   className={i === carouselIndex ? "active" : ""}
                   onClick={() => {
                     setCarouselDir(i > carouselIndex ? 1 : -1);
+                    setDragCommitting(false);
                     setCarouselIndex(i);
                   }}
                   aria-label={"Go to " + w.title}
