@@ -251,11 +251,8 @@ export default function Gallery({ meta, works }) {
             <button className="ap-carousel-arrow" onClick={() => stepCarousel(-1)} aria-label="Previous paintings">‹</button>
 
             <div
-              ref={trackRef}
-              className="ap-carousel-track"
+              className="ap-carousel-viewport"
               style={{
-                transform: "translateX(" + trackTransform + "px)",
-                transition: "none",
                 cursor: isDragging ? "grabbing" : "grab",
                 userSelect: isDragging ? "none" : "auto",
               }}
@@ -268,19 +265,32 @@ export default function Gallery({ meta, works }) {
               onTouchEnd={handleDragEnd}
               onDragStart={(e) => e.preventDefault()}
             >
-              {carouselSlots.map((w, i) => (
-                <div
-                  className={"ap-card ap-carousel-card " + (carouselDir === 1 ? "from-right" : "from-left")}
-                  key={w.id + "-" + (windowStart + i)}
-                  onClick={() => handleCardClick(w.id)}
-                >
-                  <img src={w.image} alt={w.title} draggable={false} />
-                  <div className="ap-plaque">
-                    <div className="t">{w.title}</div>
-                    <div className="m">{[w.medium, w.dimensions, w.year].filter(Boolean).join(" · ")}</div>
+              {/* The transform lives on this inner track, while the parent
+                  viewport (fixed size, overflow:hidden) never moves -- keeping
+                  them on the same element used to drag the clipping window
+                  itself off-screen during a big flick. */}
+              <div
+                ref={trackRef}
+                className="ap-carousel-track"
+                style={{
+                  transform: "translateX(" + trackTransform + "px)",
+                  transition: "none",
+                }}
+              >
+                {carouselSlots.map((w, i) => (
+                  <div
+                    className={"ap-card ap-carousel-card " + (carouselDir === 1 ? "from-right" : "from-left")}
+                    key={w.id + "-" + (windowStart + i)}
+                    onClick={() => handleCardClick(w.id)}
+                  >
+                    <img src={w.image} alt={w.title} draggable={false} />
+                    <div className="ap-plaque">
+                      <div className="t">{w.title}</div>
+                      <div className="m">{[w.medium, w.dimensions, w.year].filter(Boolean).join(" · ")}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
             <button className="ap-carousel-arrow" onClick={() => stepCarousel(1)} aria-label="Next paintings">›</button>
