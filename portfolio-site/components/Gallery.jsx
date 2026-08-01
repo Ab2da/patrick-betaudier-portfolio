@@ -189,7 +189,12 @@ export default function Gallery({ meta, works }) {
   }
 
   const slotCount = Math.min(VISIBLE_COUNT, visibleWorks.length);
-  const bufferCount = isDragging || isAnimating ? Math.min(BUFFER, visibleWorks.length) : 0;
+  // The buffer is always rendered (not just while dragging) so that starting
+  // or ending a drag never changes how many cards exist in the DOM -- that
+  // used to force React to remount the whole visible strip on every
+  // mousedown/mouseup, which showed up as a flash/blink and swallowed the
+  // gesture. The extra cards sit clipped outside the visible track at rest.
+  const bufferCount = Math.min(BUFFER, visibleWorks.length);
   const windowStart = carouselIndex - bufferCount;
   const windowLength = slotCount + bufferCount * 2;
   const carouselSlots =
