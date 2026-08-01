@@ -81,8 +81,11 @@ html, body {
 .ap-carousel-row {
   display: flex; align-items: center; gap: 14px;
 }
+.ap-carousel-viewport {
+  overflow: hidden; flex: 1; min-width: 0;
+}
 .ap-carousel-track {
-  display: flex; gap: 20px; overflow: hidden; flex: 1; min-width: 0;
+  display: flex; gap: 20px;
 }
 .ap-carousel-card {
   flex: 0 0 calc((100% - 40px) / 3);
