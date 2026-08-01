@@ -6,6 +6,11 @@ import Contact from "./Contact";
 const SERIES_ALL = "All Work";
 const VISIBLE_COUNT = 3;
 const DRAG_THRESHOLD = 60;
+const BUFFER = 3; // extra "peek" cards rendered on each side while dragging/gliding
+const MAX_TRAVEL_STEPS = 3; // hardest flick can move at most this many pictures
+const FRICTION = 0.0022; // px/ms^2 -- how quickly the glide decelerates
+const VELOCITY_STOP = 0.03; // px/ms -- momentum ends once slower than this
+const SETTLE_MS = 260; // final ease-out snap to the nearest picture
 
 export default function Gallery({ meta, works }) {
   const [activeSeries, setActiveSeries] = useState(SERIES_ALL);
@@ -13,9 +18,15 @@ export default function Gallery({ meta, works }) {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [carouselDir, setCarouselDir] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const dragStartX = useRef(0);
   const draggedRef = useRef(false);
+  const trackRef = useRef(null);
+  const cardStepRef = useRef(300);
+  const velocityRef = useRef(0);
+  const lastMoveRef = useRef({ x: 0, t: 0 });
+  const rafRef = useRef(null);
 
   const seriesList = [SERIES_ALL, ...Array.from(new Set(works.map((w) => w.series).filter(Boolean)))];
   const visibleWorks = activeSeries === SERIES_ALL ? works : works.filter((w) => w.series === activeSeries);
@@ -23,9 +34,29 @@ export default function Gallery({ meta, works }) {
   const lightboxWork = works.find((w) => w.id === lightboxId);
   const lightboxIndex = visibleWorks.findIndex((w) => w.id === lightboxId);
 
+  function measureStep() {
+    const track = trackRef.current;
+    if (!track || !track.firstElementChild) return;
+    const rect = track.firstElementChild.getBoundingClientRect();
+    const gap = parseFloat(getComputedStyle(track).gap) || 20;
+    if (rect.width > 0) cardStepRef.current = rect.width + gap;
+  }
+
+  useEffect(() => {
+    measureStep();
+    window.addEventListener("resize", measureStep);
+    return () => window.removeEventListener("resize", measureStep);
+  }, [visibleWorks.length, activeSeries]);
+
   useEffect(() => {
     setCarouselIndex(0);
+    cancelAnimationFrame(rafRef.current);
+    setIsDragging(false);
+    setIsAnimating(false);
+    setDragOffset(0);
   }, [activeSeries]);
+
+  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
 
   function stepLightbox(dir) {
     if (lightboxIndex === -1) return;
@@ -40,26 +71,113 @@ export default function Gallery({ meta, works }) {
   }
 
   function handleDragStart(clientX) {
+    if (visibleWorks.length === 0) return;
+    cancelAnimationFrame(rafRef.current);
+    setIsAnimating(false);
     dragStartX.current = clientX;
     draggedRef.current = false;
+    velocityRef.current = 0;
+    lastMoveRef.current = { x: clientX, t: performance.now() };
     setIsDragging(true);
   }
 
   function handleDragMove(clientX) {
     if (!isDragging) return;
+    const now = performance.now();
     const delta = clientX - dragStartX.current;
     if (Math.abs(delta) > 5) draggedRef.current = true;
     setDragOffset(delta);
+    const dt = now - lastMoveRef.current.t;
+    if (dt > 0) {
+      const instV = (clientX - lastMoveRef.current.x) / dt;
+      // smooth the reading so a single jittery event doesn't dominate the flick speed
+      velocityRef.current = velocityRef.current * 0.7 + instV * 0.3;
+    }
+    lastMoveRef.current = { x: clientX, t: now };
   }
 
   function handleDragEnd() {
     if (!isDragging) return;
-    const delta = dragOffset;
     setIsDragging(false);
-    setDragOffset(0);
-    if (Math.abs(delta) > DRAG_THRESHOLD) {
-      stepCarousel(delta < 0 ? 1 : -1);
+    runMomentum(dragOffset, velocityRef.current);
+  }
+
+  // Lets go of the picture and keeps it gliding in the direction (and at the
+  // speed) it was whisked, decelerating under constant "friction" until it's
+  // slow enough to settle on the nearest picture.
+  function runMomentum(startOffset, startVelocity) {
+    const step = cardStepRef.current || 1;
+    const maxOffset = step * MAX_TRAVEL_STEPS;
+    let offset = startOffset;
+    let velocity = startVelocity;
+    let last = performance.now();
+    setIsAnimating(true);
+
+    function frictionFrame(now) {
+      const dt = Math.min(now - last, 40);
+      last = now;
+      const sign = velocity > 0 ? 1 : velocity < 0 ? -1 : 0;
+      const mag = Math.max(0, Math.abs(velocity) - FRICTION * dt);
+      velocity = sign * mag;
+      offset += velocity * dt;
+      if (offset > maxOffset) {
+        offset = maxOffset;
+        velocity = 0;
+      } else if (offset < -maxOffset) {
+        offset = -maxOffset;
+        velocity = 0;
+      }
+      setDragOffset(offset);
+      if (Math.abs(velocity) > VELOCITY_STOP) {
+        rafRef.current = requestAnimationFrame(frictionFrame);
+      } else {
+        settle(offset);
+      }
     }
+
+    if (Math.abs(velocity) > VELOCITY_STOP) {
+      rafRef.current = requestAnimationFrame(frictionFrame);
+    } else {
+      settle(offset);
+    }
+  }
+
+  // Final smooth ease into whichever picture the glide ended up closest to.
+  function settle(offset) {
+    const step = cardStepRef.current || 1;
+    let steps = Math.round(offset / step);
+    steps = Math.max(-MAX_TRAVEL_STEPS, Math.min(MAX_TRAVEL_STEPS, steps));
+    if (steps === 0 && Math.abs(offset) > DRAG_THRESHOLD) {
+      steps = offset < 0 ? -1 : 1;
+    }
+    const target = steps * step;
+    const start = offset;
+    const startTime = performance.now();
+
+    function easeFrame(now) {
+      const t = Math.min(1, (now - startTime) / SETTLE_MS);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDragOffset(start + (target - start) * eased);
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(easeFrame);
+      } else {
+        commitSteps(steps);
+      }
+    }
+    rafRef.current = requestAnimationFrame(easeFrame);
+  }
+
+  function commitSteps(steps) {
+    if (steps !== 0) {
+      const dir = steps > 0 ? -1 : 1;
+      setCarouselDir(dir);
+      setCarouselIndex((i) => {
+        const n = visibleWorks.length;
+        return (((i - steps) % n) + n) % n;
+      });
+    }
+    setIsAnimating(false);
+    setDragOffset(0);
   }
 
   function handleCardClick(id) {
@@ -71,7 +189,18 @@ export default function Gallery({ meta, works }) {
   }
 
   const slotCount = Math.min(VISIBLE_COUNT, visibleWorks.length);
-  const carouselSlots = Array.from({ length: slotCount }, (_, offset) => visibleWorks[(carouselIndex + offset) % visibleWorks.length]);
+  const bufferCount = isDragging || isAnimating ? Math.min(BUFFER, visibleWorks.length) : 0;
+  const windowStart = carouselIndex - bufferCount;
+  const windowLength = slotCount + bufferCount * 2;
+  const carouselSlots =
+    visibleWorks.length === 0
+      ? []
+      : Array.from({ length: windowLength }, (_, i) => {
+          const n = visibleWorks.length;
+          const idx = (((windowStart + i) % n) + n) % n;
+          return visibleWorks[idx];
+        });
+  const trackTransform = -bufferCount * (cardStepRef.current || 0) + dragOffset;
 
   return (
     <div>
@@ -117,10 +246,11 @@ export default function Gallery({ meta, works }) {
             <button className="ap-carousel-arrow" onClick={() => stepCarousel(-1)} aria-label="Previous paintings">‹</button>
 
             <div
+              ref={trackRef}
               className="ap-carousel-track"
               style={{
-                transform: "translateX(" + dragOffset + "px)",
-                transition: isDragging ? "none" : "transform 0.25s ease",
+                transform: "translateX(" + trackTransform + "px)",
+                transition: "none",
                 cursor: isDragging ? "grabbing" : "grab",
                 userSelect: isDragging ? "none" : "auto",
               }}
@@ -133,10 +263,10 @@ export default function Gallery({ meta, works }) {
               onTouchEnd={handleDragEnd}
               onDragStart={(e) => e.preventDefault()}
             >
-              {carouselSlots.map((w, offset) => (
+              {carouselSlots.map((w, i) => (
                 <div
                   className={"ap-card ap-carousel-card " + (carouselDir === 1 ? "from-right" : "from-left")}
-                  key={w.id + "-" + offset + "-" + carouselIndex}
+                  key={w.id + "-" + (windowStart + i)}
                   onClick={() => handleCardClick(w.id)}
                 >
                   <img src={w.image} alt={w.title} draggable={false} />
