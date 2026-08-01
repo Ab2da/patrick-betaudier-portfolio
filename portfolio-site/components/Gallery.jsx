@@ -303,7 +303,17 @@ export default function Gallery({ meta, works }) {
               >
                 {carouselSlots.map(({ work: w, idx }, i) => (
                   <div
-                    className={"ap-card ap-carousel-card " + (carouselDir === 1 ? "from-right" : "from-left")}
+                    className={
+                      "ap-card ap-carousel-card " +
+                      // A drag settling already has its own motion from the
+                      // glide itself. Skipping the pop-in class here also
+                      // avoids a separate bug: this class is shared by every
+                      // card, so if it changed value on a card that persists
+                      // across the commit (same key, not remounted), the
+                      // browser replays the fade-in animation on it anyway --
+                      // a blink with no remount involved.
+                      (dragCommitting ? "" : carouselDir === 1 ? "from-right" : "from-left")
+                    }
                     key={dragCommitting ? w.id + "-" + idx : w.id + "-" + (windowStart + i)}
                     onClick={() => handleCardClick(w.id)}
                   >
