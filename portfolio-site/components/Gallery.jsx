@@ -33,6 +33,14 @@ export default function Gallery({ meta, works }) {
   const velocityRef = useRef(0);
   const lastMoveRef = useRef({ x: 0, t: 0 });
   const rafRef = useRef(null);
+  // React state updates aren't synchronous, so on a fast real flick several
+  // mousemove events can fire before a render has applied setIsDragging(true)
+  // -- those events would read a stale "isDragging = false" from the closure
+  // and get silently dropped, which are exactly the fastest samples that
+  // should have driven the velocity reading. These refs track drag state and
+  // the latest offset synchronously so no movement sample is ever missed.
+  const isDraggingRef = useRef(false);
+  const dragOffsetRef = useRef(0);
 
   const seriesList = [SERIES_ALL, ...Array.from(new Set(works.map((w) => w.series).filter(Boolean)))];
   const visibleWorks = activeSeries === SERIES_ALL ? works : works.filter((w) => w.series === activeSeries);
@@ -84,15 +92,18 @@ export default function Gallery({ meta, works }) {
     dragStartX.current = clientX;
     draggedRef.current = false;
     velocityRef.current = 0;
+    dragOffsetRef.current = 0;
     lastMoveRef.current = { x: clientX, t: performance.now() };
+    isDraggingRef.current = true;
     setIsDragging(true);
   }
 
   function handleDragMove(clientX) {
-    if (!isDragging) return;
+    if (!isDraggingRef.current) return;
     const now = performance.now();
     const delta = clientX - dragStartX.current;
     if (Math.abs(delta) > 5) draggedRef.current = true;
+    dragOffsetRef.current = delta;
     setDragOffset(delta);
     const dt = now - lastMoveRef.current.t;
     if (dt > 0) {
@@ -104,9 +115,10 @@ export default function Gallery({ meta, works }) {
   }
 
   function handleDragEnd() {
-    if (!isDragging) return;
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
     setIsDragging(false);
-    runMomentum(dragOffset, velocityRef.current);
+    runMomentum(dragOffsetRef.current, velocityRef.current);
   }
 
   // Lets go of the picture and keeps it gliding in the direction (and at the
@@ -271,7 +283,7 @@ export default function Gallery({ meta, works }) {
               onMouseDown={(e) => handleDragStart(e.clientX)}
               onMouseMove={(e) => handleDragMove(e.clientX)}
               onMouseUp={handleDragEnd}
-              onMouseLeave={() => isDragging && handleDragEnd()}
+              onMouseLeave={handleDragEnd}
               onTouchStart={(e) => handleDragStart(e.touches[0].clientX)}
               onTouchMove={(e) => handleDragMove(e.touches[0].clientX)}
               onTouchEnd={handleDragEnd}
