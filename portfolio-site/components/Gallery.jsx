@@ -251,7 +251,6 @@ export default function Gallery({ meta, works }) {
         <div className="ap-hero" onClick={() => setLightboxId(featured.id)}>
           <img src={featured.image} alt={featured.title} />
           <div className="ap-hero-overlay">
-            <div className="ap-label" style={{ color: "#c9bfa4" }}>Featured Work</div>
             <div className="ap-hero-title">{featured.title}</div>
             <div className="ap-hero-meta ap-mono" style={{ fontSize: 12 }}>
               {[featured.medium, featured.dimensions, featured.year].filter(Boolean).join(" · ")}
