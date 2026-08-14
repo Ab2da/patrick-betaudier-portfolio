@@ -72,7 +72,7 @@ html, body {
   box-shadow: 0 6px 14px rgba(33,30,26,0.25);
 }
 .ap-card:hover .ap-plaque { bottom: 10px; }
-.ap-plaque .t { font-family: "Fraunces", serif; font-style: italic; font-size: 14px; }
+.ap-plaque .t { font-family: "Fraunces", serif; font-style: normal; font-size: 13px; }
 .ap-plaque .m { font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--ink-soft); margin-top: 2px; }
 
 .ap-carousel {
