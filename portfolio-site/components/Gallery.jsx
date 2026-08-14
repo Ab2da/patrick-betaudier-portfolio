@@ -370,7 +370,7 @@ export default function Gallery({ meta, works }) {
             <button onClick={() => stepLightbox(1)} style={{ ...navBtnStyle, right: -50 }}>›</button>
             <img src={lightboxWork.image} alt={lightboxWork.title} style={{ width: "100%", maxHeight: "72vh", objectFit: "contain", background: "#000" }} />
             <div style={{ background: "#e9dcb8", border: "1px solid #c08a32", padding: "14px 20px", marginTop: 2 }}>
-              <div className="ap-display" style={{ fontStyle: "italic", fontSize: 20 }}>{lightboxWork.title}</div>
+                        <div className="ap-display" style={{ fontStyle: "normal", fontSize: 13 }}>{lightboxWork.title}</div>
               <div className="ap-mono" style={{ fontSize: 12, color: "#55504a", marginTop: 4 }}>
                 {[lightboxWork.medium, lightboxWork.dimensions, lightboxWork.year].filter(Boolean).join(" · ")}
               </div>
